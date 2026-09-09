@@ -1,3 +1,4 @@
+import { GoogleGenAI } from '@google/genai';
 import OpenAI from 'openai';
 import { z } from 'zod';
 
@@ -69,15 +70,10 @@ function fallbackRuleTriage(transcript, language) {
 }
 
 export async function analyzeTriage(transcript, language = 'en-US') {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
 
-  if (!apiKey || apiKey.trim() === '' || apiKey.includes('YOUR_OPENAI_API_KEY')) {
-    return fallbackRuleTriage(transcript, language);
-  }
-
-  try {
-    const openai = new OpenAI({ apiKey });
-    const prompt = `You are an expert ER Triage Physician AI. Analyze the following patient intake transcript (spoken language: ${language}).
+  const prompt = `You are an expert ER Triage Physician AI. Analyze the following patient intake transcript (spoken language: ${language}).
 Convert it into an Emergency Severity Index (ESI) classification from 1 to 5:
 - ESI 1: Resuscitation (Immediate life-saving intervention needed, e.g. cardiac arrest, severe respiratory distress, unresponsive)
 - ESI 2: Emergent (High risk, confused/lethargic/disoriented, severe pain/distress)
@@ -87,7 +83,7 @@ Convert it into an Emergency Severity Index (ESI) classification from 1 to 5:
 
 Identify any life-threatening red flags.
 
-Output MUST be a valid JSON object matching this schema:
+Output MUST be a valid JSON object matching this exact schema:
 {
   "translatedSummary": "Clear English clinical summary of patient report",
   "chiefComplaint": "Short 3-6 word chief complaint",
@@ -100,21 +96,45 @@ Output MUST be a valid JSON object matching this schema:
 
 Patient Transcript: "${transcript}"`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: 'You are an automated ER clinical triage algorithm adhering to Emergency Severity Index protocol.' },
-        { role: 'user', content: prompt }
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.1
-    });
+  if (geminiKey && geminiKey.trim() !== '' && !geminiKey.includes('YOUR_')) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiKey.trim() });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json'
+        }
+      });
 
-    const content = response.choices[0].message.content;
-    const parsed = JSON.parse(content);
-    return TriageSchema.parse(parsed);
-  } catch (error) {
-    console.error('[OpenAI Triage Error]:', error.message);
-    return fallbackRuleTriage(transcript, language);
+      const text = response.text;
+      const parsed = JSON.parse(text);
+      return TriageSchema.parse(parsed);
+    } catch (error) {
+      console.error('[Google Gemini Triage Error]:', error.message);
+    }
   }
+
+  if (openaiKey && openaiKey.trim() !== '' && !openaiKey.includes('YOUR_')) {
+    try {
+      const openai = new OpenAI({ apiKey: openaiKey.trim() });
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: 'You are an automated ER clinical triage algorithm adhering to Emergency Severity Index protocol.' },
+          { role: 'user', content: prompt }
+        ],
+        response_format: { type: 'json_object' },
+        temperature: 0.1
+      });
+
+      const content = response.choices[0].message.content;
+      const parsed = JSON.parse(content);
+      return TriageSchema.parse(parsed);
+    } catch (error) {
+      console.error('[OpenAI Triage Error]:', error.message);
+    }
+  }
+
+  return fallbackRuleTriage(transcript, language);
 }

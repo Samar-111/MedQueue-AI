@@ -13,11 +13,13 @@ Create or update `server/.env` with your settings:
 ```env
 PORT=5000
 MONGODB_URI=
+GEMINI_API_KEY=
 OPENAI_API_KEY=
 CLIENT_ORIGIN=http://localhost:5173
 ```
 
-- **`OPENAI_API_KEY`**: Your OpenAI API Key (`sk-proj-...`). Powers GPT-4o AI clinical triage, ESI 1-5 level classification, and red-flag identification. If left blank, the app uses an internal rule-based triage engine automatically.
+- **`GEMINI_API_KEY`**: Your Google Gemini API Key (get free at Google AI Studio). Powers Google Gemini AI clinical triage, ESI 1-5 level classification, and red-flag identification.
+- **`OPENAI_API_KEY`**: Your OpenAI API Key (`sk-proj-...`). Optional alternative AI provider.
 - **`MONGODB_URI`**: Your MongoDB connection URI (Atlas cloud or local `mongodb://127.0.0.1:27017/medqueue`). If left blank, the app runs on a high-performance in-memory database store with zero setup needed.
 
 ### 2. Client Configuration (`/client/.env`)
