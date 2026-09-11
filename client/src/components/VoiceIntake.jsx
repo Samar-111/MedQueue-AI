@@ -18,11 +18,14 @@ import {
   Sun,
   Plus,
   PlusCircle,
-  Stethoscope
+  Stethoscope,
+  MessageSquare,
+  Send,
+  Bot
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import AudioWaveform from './AudioWaveform';
-import { analyzeVoiceTriage, createPatient } from '../services/api';
+import { analyzeVoiceTriage, createPatient, chatFollowUpTriage } from '../services/api';
 
 export default function VoiceIntake({ onPatientAdded }) {
   const [isListening, setIsListening] = useState(false);
@@ -38,6 +41,55 @@ export default function VoiceIntake({ onPatientAdded }) {
   const [customDiseaseInput, setCustomDiseaseInput] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
   const [addedNotice, setAddedNotice] = useState('');
+  const [intakeMode, setIntakeMode] = useState('DIRECT');
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'ai', content: 'Hello! I am your AI ER Triage Assistant. Please describe your symptoms or health concerns today.' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
+  const [isChatLoading, setIsChatLoading] = useState(false);
+  const [isChatComplete, setIsChatComplete] = useState(false);
+
+  const handleSendChatMessage = async (overrideText = null) => {
+    const textToSend = (overrideText || chatInput).trim();
+    if (!textToSend || isChatLoading) return;
+
+    const userMsg = { role: 'patient', content: textToSend };
+    const updatedHistory = [...chatMessages, userMsg];
+    setChatMessages(updatedHistory);
+    setChatInput('');
+    setIsChatLoading(true);
+
+    try {
+      const res = await chatFollowUpTriage(updatedHistory, language);
+      if (res && res.nextQuestion) {
+        setChatMessages([...updatedHistory, { role: 'ai', content: res.nextQuestion }]);
+      }
+      if (res && res.isComplete) {
+        setIsChatComplete(true);
+      }
+    } catch (err) {
+      console.error('Chat follow-up error:', err);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
+
+  const handleAnalyzeChatHistory = async () => {
+    setIsAnalyzing(true);
+    try {
+      const conversationText = chatMessages
+        .map((m) => `${m.role === 'patient' ? 'Patient' : 'AI Doctor'}: ${m.content}`)
+        .join('\n');
+      const res = await analyzeVoiceTriage(conversationText, language);
+      setTriageResult(res);
+      setTranscript(conversationText);
+      confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
+    } catch (err) {
+      console.error('Triage chat analysis error:', err);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   const recognitionRef = useRef(null);
   const shouldListenRef = useRef(false);
@@ -313,6 +365,33 @@ export default function VoiceIntake({ onPatientAdded }) {
           </div>
 
           <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 bg-amber-50 p-1.5 rounded-full border border-amber-200 shadow-inner">
+              <button
+                type="button"
+                onClick={() => setIntakeMode('DIRECT')}
+                className={`px-4 py-1.5 rounded-full text-xs font-black transition-all flex items-center gap-1.5 ${
+                  intakeMode === 'DIRECT'
+                    ? 'pulse-buffer-btn text-white shadow-sm'
+                    : 'text-stone-700 hover:text-stone-900 font-bold'
+                }`}
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Direct Voice / Text</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIntakeMode('INTERACTIVE')}
+                className={`px-4 py-1.5 rounded-full text-xs font-black transition-all flex items-center gap-1.5 ${
+                  intakeMode === 'INTERACTIVE'
+                    ? 'pulse-buffer-btn text-white shadow-sm'
+                    : 'text-stone-700 hover:text-stone-900 font-bold'
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Interactive AI Chat</span>
+              </button>
+            </div>
+
             <div className="flex items-center gap-2 bg-amber-50 p-2 rounded-full border border-amber-200 shadow-inner">
               <Globe className="w-4 h-4 text-orange-500 ml-2" />
               <select
@@ -401,141 +480,243 @@ export default function VoiceIntake({ onPatientAdded }) {
           </div>
         </div>
 
-        <div className="bg-amber-50/80 p-5 rounded-2xl border border-amber-200 my-6 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-indigo-950 flex items-center gap-1.5">
-              <Stethoscope className="w-4 h-4 text-orange-500" />
-              <span>Instant Tap-to-Add Common Disease & Symptom Chips:</span>
-            </span>
-            {addedNotice && (
-              <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 animate-pulse">
-                {addedNotice}
-              </span>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {commonDiseaseChips.map((chip, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => appendDiseaseToBox(chip.text)}
-                className="px-3.5 py-2 rounded-xl bg-white border border-amber-200 hover:border-orange-500 hover:bg-orange-50 text-stone-800 text-xs font-black transition-all flex items-center gap-1.5 shadow-sm hover:shadow"
-              >
-                <Plus className="w-3.5 h-3.5 text-orange-500" />
-                <span>{chip.label}</span>
-              </button>
-            ))}
-          </div>
-
-          <form onSubmit={handleAddCustomDisease} className="pt-2 flex items-center gap-2">
-            <input
-              type="text"
-              placeholder="Type any specific disease or symptom (e.g. Dengue Fever, Asthma) and press Enter..."
-              value={customDiseaseInput}
-              onChange={(e) => setCustomDiseaseInput(e.target.value)}
-              className="flex-1 bg-white border border-amber-200 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-900 focus:outline-none focus:border-orange-500"
-            />
-            <button
-              type="submit"
-              disabled={!customDiseaseInput.trim()}
-              className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs flex items-center gap-1 transition-colors disabled:opacity-50"
-            >
-              <PlusCircle className="w-4 h-4" />
-              <span>Add to Box</span>
-            </button>
-          </form>
-        </div>
-
-        <div className="flex flex-col items-center justify-center my-8">
-          <div className="relative flex items-center justify-center">
-            {isListening && (
-              <>
-                <span className="absolute w-36 h-36 rounded-full bg-rose-400/30 animate-ping" />
-                <span className="absolute w-48 h-48 rounded-full bg-rose-400/20 animate-pulse" />
-              </>
-            )}
-            <button
-              onClick={toggleListening}
-              className={`relative z-10 flex items-center justify-center w-24 h-24 rounded-full transition-all duration-300 ${
-                isListening
-                  ? 'btn-coral-gradient scale-110 shadow-lg shadow-rose-500/30'
-                  : 'pulse-buffer-btn hover:scale-105 shadow-xl shadow-orange-500/30'
-              }`}
-            >
-              {isListening ? (
-                <MicOff className="w-10 h-10 text-white" />
-              ) : (
-                <Mic className="w-10 h-10 text-white" />
+        {intakeMode === 'INTERACTIVE' ? (
+          <div className="my-6 space-y-4">
+            <div className="bg-amber-50/60 border border-amber-200 rounded-3xl p-6 space-y-4 max-h-[420px] overflow-y-auto shadow-inner">
+              {chatMessages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex items-start gap-3 ${
+                    msg.role === 'patient' ? 'justify-end' : 'justify-start'
+                  }`}
+                >
+                  {msg.role === 'ai' && (
+                    <div className="w-8 h-8 rounded-full bg-orange-500 text-white flex items-center justify-center font-black shadow-md flex-shrink-0">
+                      <Bot className="w-4 h-4" />
+                    </div>
+                  )}
+                  <div
+                    className={`max-w-md p-4 rounded-2xl text-xs font-bold shadow-sm leading-relaxed ${
+                      msg.role === 'patient'
+                        ? 'bg-indigo-950 text-white rounded-br-none font-sans'
+                        : 'bg-white text-stone-800 border border-amber-200 rounded-bl-none'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                  {msg.role === 'patient' && (
+                    <div className="w-8 h-8 rounded-full bg-indigo-950 text-white flex items-center justify-center font-black shadow-md flex-shrink-0">
+                      <User className="w-4 h-4" />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {isChatLoading && (
+                <div className="flex items-center gap-2 text-xs font-bold text-orange-600 animate-pulse bg-white/80 p-3 rounded-2xl border border-amber-200 max-w-xs">
+                  <div className="w-3 h-3 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                  <span>AI ER Doctor is generating clinical follow-up...</span>
+                </div>
               )}
-            </button>
-          </div>
+            </div>
 
-          <p className="text-xs font-black mt-4 text-stone-800 tracking-wide text-center">
-            {isListening
-              ? '🎙️ Recording Voice Input... Click again to stop & append into box!'
-              : 'Click Microphone to Start Voice Intake'}
-          </p>
-
-          {statusMessage && (
-            <p className="text-[11px] font-extrabold text-orange-600 mt-1.5 text-center bg-orange-50 px-3 py-1.5 rounded-full border border-orange-200">
-              {statusMessage}
-            </p>
-          )}
-        </div>
-
-        <AudioWaveform isListening={isListening} />
-
-        <div className="space-y-2 mt-6">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-black text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-orange-500" />
-              <span>Voice Speech Transcript & Clinical Description (The Box)</span>
-            </label>
-            {transcript && (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendChatMessage();
+              }}
+              className="flex items-center gap-2"
+            >
+              <input
+                type="text"
+                placeholder="Type your response to the AI Doctor (or use voice mic)..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                disabled={isChatLoading}
+                className="flex-1 bg-white border border-amber-200 rounded-2xl px-4 py-3 text-xs font-bold text-stone-900 focus:outline-none focus:border-orange-500 shadow-sm"
+              />
               <button
-                onClick={() => {
-                  setTranscript('');
-                  baseTranscriptRef.current = '';
-                }}
-                className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1 font-bold"
+                type="button"
+                onClick={toggleListening}
+                className={`p-3 rounded-2xl border transition-all ${
+                  isListening ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                }`}
               >
-                <RotateCcw className="w-3.5 h-3.5" /> Clear Box
+                <Mic className="w-4 h-4" />
               </button>
-            )}
+              <button
+                type="submit"
+                disabled={!chatInput.trim() || isChatLoading}
+                className="pulse-buffer-btn px-6 py-3 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <span>Send</span>
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </form>
+
+            <div className="pt-4 flex justify-between items-center border-t border-amber-100">
+              <span className="text-xs font-bold text-stone-500">
+                {isChatComplete ? '✅ Sufficient clinical details gathered.' : 'Answer follow-up questions or generate triage anytime.'}
+              </span>
+              <button
+                type="button"
+                onClick={handleAnalyzeChatHistory}
+                disabled={chatMessages.length < 2 || isAnalyzing}
+                className="pulse-buffer-btn px-8 py-3.5 font-black text-xs uppercase tracking-wider flex items-center gap-2 disabled:opacity-50"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Evaluating Complete Dialogue...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Finalize AI Triage Report</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
           </div>
+        ) : (
+          <>
+            <div className="bg-amber-50/80 p-5 rounded-2xl border border-amber-200 my-6 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-indigo-950 flex items-center gap-1.5">
+                  <Stethoscope className="w-4 h-4 text-orange-500" />
+                  <span>Instant Tap-to-Add Common Disease & Symptom Chips:</span>
+                </span>
+                {addedNotice && (
+                  <span className="text-xs font-black text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300 animate-pulse">
+                    {addedNotice}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {commonDiseaseChips.map((chip, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => appendDiseaseToBox(chip.text)}
+                    className="px-3.5 py-2 rounded-xl bg-white border border-amber-200 hover:border-orange-500 hover:bg-orange-50 text-stone-800 text-xs font-black transition-all flex items-center gap-1.5 shadow-sm hover:shadow"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-orange-500" />
+                    <span>{chip.label}</span>
+                  </button>
+                ))}
+              </div>
 
-          <textarea
-            rows={4}
-            value={transcript}
-            onChange={(e) => {
-              setTranscript(e.target.value);
-              baseTranscriptRef.current = e.target.value;
-            }}
-            placeholder="Your spoken diseases and symptoms will appear here in real-time as you speak... You can also tap the disease chips above or type directly into this box."
-            className="w-full bg-stone-50 border-2 border-amber-300 rounded-2xl p-4 text-xs font-bold text-stone-900 placeholder-stone-400 focus:outline-none focus:border-orange-500 focus:bg-white transition-all font-sans leading-relaxed shadow-inner"
-          />
-        </div>
+              <form onSubmit={handleAddCustomDisease} className="pt-2 flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder="Type any specific disease or symptom (e.g. Dengue Fever, Asthma) and press Enter..."
+                  value={customDiseaseInput}
+                  onChange={(e) => setCustomDiseaseInput(e.target.value)}
+                  className="flex-1 bg-white border border-amber-200 rounded-xl px-3.5 py-2 text-xs font-bold text-stone-900 focus:outline-none focus:border-orange-500"
+                />
+                <button
+                  type="submit"
+                  disabled={!customDiseaseInput.trim()}
+                  className="px-4 py-2 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-black text-xs flex items-center gap-1 transition-colors disabled:opacity-50"
+                >
+                  <PlusCircle className="w-4 h-4" />
+                  <span>Add to Box</span>
+                </button>
+              </form>
+            </div>
 
-        <div className="mt-8 flex justify-end">
-          <button
-            onClick={handleAnalyze}
-            disabled={!transcript.trim() || isAnalyzing}
-            className="pulse-buffer-btn px-9 py-4 font-black text-xs uppercase tracking-wider flex items-center gap-2.5 disabled:opacity-50 disabled:pointer-events-none"
-          >
-            {isAnalyzing ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                <span>Evaluating AI Clinical Triage...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4" />
-                <span>Classify ESI & Detect Red Flags</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-        </div>
+            <div className="flex flex-col items-center justify-center my-8">
+              <div className="relative flex items-center justify-center">
+                {isListening && (
+                  <>
+                    <span className="absolute w-36 h-36 rounded-full bg-rose-400/30 animate-ping" />
+                    <span className="absolute w-48 h-48 rounded-full bg-rose-400/20 animate-pulse" />
+                  </>
+                )}
+                <button
+                  onClick={toggleListening}
+                  className={`relative z-10 flex items-center justify-center w-24 h-24 rounded-full transition-all duration-300 ${
+                    isListening
+                      ? 'btn-coral-gradient scale-110 shadow-lg shadow-rose-500/30'
+                      : 'pulse-buffer-btn hover:scale-105 shadow-xl shadow-orange-500/30'
+                  }`}
+                >
+                  {isListening ? (
+                    <MicOff className="w-10 h-10 text-white" />
+                  ) : (
+                    <Mic className="w-10 h-10 text-white" />
+                  )}
+                </button>
+              </div>
+
+              <p className="text-xs font-black mt-4 text-stone-800 tracking-wide text-center">
+                {isListening
+                  ? '🎙️ Recording Voice Input... Click again to stop & append into box!'
+                  : 'Click Microphone to Start Voice Intake'}
+              </p>
+
+              {statusMessage && (
+                <p className="text-[11px] font-extrabold text-orange-600 mt-1.5 text-center bg-orange-50 px-3 py-1.5 rounded-full border border-orange-200">
+                  {statusMessage}
+                </p>
+              )}
+            </div>
+
+            <AudioWaveform isListening={isListening} />
+
+            <div className="space-y-2 mt-6">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-stone-700 uppercase tracking-wider flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-orange-500" />
+                  <span>Voice Speech Transcript & Clinical Description (The Box)</span>
+                </label>
+                {transcript && (
+                  <button
+                    onClick={() => {
+                      setTranscript('');
+                      baseTranscriptRef.current = '';
+                    }}
+                    className="text-xs text-stone-400 hover:text-stone-700 flex items-center gap-1 font-bold"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" /> Clear Box
+                  </button>
+                )}
+              </div>
+
+              <textarea
+                rows={4}
+                value={transcript}
+                onChange={(e) => {
+                  setTranscript(e.target.value);
+                  baseTranscriptRef.current = e.target.value;
+                }}
+                placeholder="Your spoken diseases and symptoms will appear here in real-time as you speak... You can also tap the disease chips above or type directly into this box."
+                className="w-full bg-stone-50 border-2 border-amber-300 rounded-2xl p-4 text-xs font-bold text-stone-900 placeholder-stone-400 focus:outline-none focus:border-orange-500 focus:bg-white transition-all font-sans leading-relaxed shadow-inner"
+              />
+            </div>
+
+            <div className="mt-8 flex justify-end">
+              <button
+                onClick={handleAnalyze}
+                disabled={!transcript.trim() || isAnalyzing}
+                className="pulse-buffer-btn px-9 py-4 font-black text-xs uppercase tracking-wider flex items-center gap-2.5 disabled:opacity-50 disabled:pointer-events-none"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Evaluating AI Clinical Triage...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Classify ESI & Detect Red Flags</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
 

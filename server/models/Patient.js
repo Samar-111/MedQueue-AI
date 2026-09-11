@@ -29,7 +29,10 @@ const PatientSchema = new mongoose.Schema(
       temperature: { type: Number, default: 98.6 }
     },
     nurseNotes: { type: String, default: '' },
-    doctorNotes: { type: String, default: '' }
+    doctorNotes: { type: String, default: '' },
+    isEscalated: { type: Boolean, default: false },
+    previousEsiLevel: { type: Number, default: null },
+    escalationReason: { type: String, default: '' }
   },
   { timestamps: true }
 );

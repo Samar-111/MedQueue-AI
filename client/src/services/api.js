@@ -34,4 +34,14 @@ export const overridePatientESI = async (id, overrideData) => {
   return response.data;
 };
 
+export const chatFollowUpTriage = async (history, language) => {
+  const response = await api.post('/api/triage/chat', { history, language });
+  return response.data;
+};
+
+export const updatePatientVitals = async (id, vitals) => {
+  const response = await api.patch(`/api/patients/${id}/vitals`, { vitals });
+  return response.data;
+};
+
 export default api;

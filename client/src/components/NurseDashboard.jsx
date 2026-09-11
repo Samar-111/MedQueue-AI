@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   UserCheck, 
@@ -16,9 +16,12 @@ import {
   Search,
   Filter,
   User,
-  SlidersHorizontal
+  SlidersHorizontal,
+  BellRing,
+  X
 } from 'lucide-react';
-import { updatePatientStatus, overridePatientESI } from '../services/api';
+import { updatePatientStatus, overridePatientESI, updatePatientVitals } from '../services/api';
+import { socket } from '../services/socket';
 
 export default function NurseDashboard({ patients, isConnected }) {
   const [selectedPatient, setSelectedPatient] = useState(null);
@@ -28,6 +31,36 @@ export default function NurseDashboard({ patients, isConnected }) {
   const [assignedRoom, setAssignedRoom] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterESI, setFilterESI] = useState('ALL');
+  const [escalationAlert, setEscalationAlert] = useState(null);
+
+  const playAlarmSound = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    } catch (e) {}
+  };
+
+  useEffect(() => {
+    const handleEscalation = (data) => {
+      setEscalationAlert(data);
+      playAlarmSound();
+    };
+
+    socket.on('emergency_escalation', handleEscalation);
+    return () => {
+      socket.off('emergency_escalation', handleEscalation);
+    };
+  }, []);
 
   const activeQueue = patients.filter(
     (p) => p.status === 'WAITING' || p.status === 'TRIAGED'
@@ -53,14 +86,20 @@ export default function NurseDashboard({ patients, isConnected }) {
   const handleSaveTriage = async () => {
     if (!selectedPatient) return;
     try {
+      const patientId = selectedPatient._id || selectedPatient.ticketId;
+      
+      if (editVitals) {
+        await updatePatientVitals(patientId, editVitals);
+      }
+
       if (overrideESI !== selectedPatient.esiLevel) {
-        await overridePatientESI(selectedPatient._id || selectedPatient.ticketId, {
+        await overridePatientESI(patientId, {
           esiLevel: Number(overrideESI),
           nurseNotes: nurseNoteText
         });
       }
 
-      await updatePatientStatus(selectedPatient._id || selectedPatient.ticketId, {
+      await updatePatientStatus(patientId, {
         status: 'TRIAGED',
         roomNumber: assignedRoom.trim() || null,
         nurseNotes: nurseNoteText
@@ -101,6 +140,45 @@ export default function NurseDashboard({ patients, isConnected }) {
 
   return (
     <div className="space-y-6">
+      
+      <AnimatePresence>
+        {escalationAlert && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="p-5 rounded-3xl bg-rose-600 text-white shadow-2xl border-2 border-rose-300 flex items-start justify-between gap-4"
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center flex-shrink-0 text-white">
+                <BellRing className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black uppercase tracking-wider bg-rose-900/60 px-2.5 py-0.5 rounded-full border border-rose-400">
+                    🚨 EMERGENCY CLINICAL ESCALATION
+                  </span>
+                  <span className="text-xs font-mono font-bold text-rose-100">
+                    Ticket #{escalationAlert.patient?.ticketId}
+                  </span>
+                </div>
+                <h3 className="text-base font-black mt-1">
+                  PATIENT CONDITION ESCALATED: {escalationAlert.patient?.name} (ESI {escalationAlert.previousEsiLevel} → ESI {escalationAlert.newEsiLevel})
+                </h3>
+                <p className="text-xs font-bold text-rose-100 mt-0.5">
+                  Reason: {escalationAlert.reason}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setEscalationAlert(null)}
+              className="p-1.5 rounded-full hover:bg-white/20 transition-colors text-white"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       <div className="glass-card p-6 sm:p-8 rounded-3xl border border-teal-100 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
         <div>
@@ -199,6 +277,13 @@ export default function NurseDashboard({ patients, isConnected }) {
                                   🚨 {flag}
                                 </span>
                               ))}
+                            </div>
+                          )}
+
+                          {patient.isEscalated && (
+                            <div className="mt-2 px-3 py-1 rounded-full bg-rose-600 text-white text-[10px] font-black inline-flex items-center gap-1.5 animate-pulse shadow-sm">
+                              <BellRing className="w-3 h-3" />
+                              <span>CONDITION ESCALATED: ESI {patient.previousEsiLevel} → ESI {patient.esiLevel} ({patient.escalationReason})</span>
                             </div>
                           )}
                         </div>

@@ -70,9 +70,75 @@ function fallbackRuleTriage(transcript, language) {
   };
 }
 
-export async function analyzeTriage(transcript, language = 'en-US') {
+export async function generateFollowUpQuestion(history, language = 'en-US') {
   const geminiKey = process.env.GEMINI_API_KEY;
   const openaiKey = process.env.OPENAI_API_KEY;
+
+  const conversationText = Array.isArray(history)
+    ? history.map((m) => `${m.role === 'patient' ? 'Patient' : 'AI Doctor'}: ${m.content}`).join('\n')
+    : `Patient: ${history}`;
+
+  const prompt = `You are an empathetic ER Triage Doctor AI evaluating a patient in an emergency intake.
+Review the intake dialogue below:
+${conversationText}
+
+Determine if you need 1 more critical clinical follow-up question to accurately assign an Emergency Severity Index (ESI 1-5) tier.
+Questions should clarify: exact pain location, onset time/duration, radiation, respiratory distress, or severe associated red flags.
+
+If sufficient details exist or 3+ turns have occurred, mark isComplete as true.
+Output MUST be valid JSON matching this schema:
+{
+  "nextQuestion": "Short 1-sentence targeted follow-up question (max 15 words)",
+  "isComplete": boolean
+}`;
+
+  if (geminiKey && geminiKey.trim() !== '' && !geminiKey.includes('YOUR_')) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiKey.trim() });
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: { responseMimeType: 'application/json' }
+      });
+      return JSON.parse(response.text);
+    } catch (error) {
+      console.error('[Gemini Chat Error]:', error.message);
+    }
+  }
+
+  if (openaiKey && openaiKey.trim() !== '' && !openaiKey.includes('YOUR_')) {
+    try {
+      const openai = new OpenAI({ apiKey: openaiKey.trim() });
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        temperature: 0.2
+      });
+      return JSON.parse(response.choices[0].message.content);
+    } catch (error) {
+      console.error('[OpenAI Chat Error]:', error.message);
+    }
+  }
+
+  const textLower = conversationText.toLowerCase();
+  if (textLower.includes('chest pain') && !textLower.includes('side') && !textLower.includes('arm')) {
+    return { nextQuestion: 'Where exactly is the chest pain, and does it radiate to your arm or jaw?', isComplete: false };
+  }
+  if (!textLower.includes('ago') && !textLower.includes('start') && !textLower.includes('minute') && !textLower.includes('hour')) {
+    return { nextQuestion: 'When did your symptoms start, and are they getting worse right now?', isComplete: false };
+  }
+
+  return { nextQuestion: 'Thank you. Processing complete clinical triage report.', isComplete: true };
+}
+
+export async function analyzeTriage(transcriptInput, language = 'en-US') {
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const openaiKey = process.env.OPENAI_API_KEY;
+
+  const transcript = Array.isArray(transcriptInput)
+    ? transcriptInput.map((m) => `${m.role === 'patient' ? 'Patient' : 'AI Doctor'}: ${m.content}`).join('\n')
+    : transcriptInput;
 
   const prompt = `You are an expert ER Triage Physician AI. Analyze the following patient intake transcript (spoken language: ${language}).
 Convert it into an Emergency Severity Index (ESI) classification from 1 to 5:

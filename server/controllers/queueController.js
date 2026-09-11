@@ -142,3 +142,71 @@ export async function updatePatientStatus(id, updateData, io) {
 
   return updated;
 }
+
+export async function updatePatientVitals(id, vitals, io) {
+  let patient;
+  if (getDBStatus()) {
+    patient = await Patient.findById(id);
+    if (!patient) patient = await Patient.findOne({ ticketId: id });
+  } else {
+    const store = getMemoryStore();
+    patient = store.find((p) => p._id.toString() === id.toString() || p.ticketId === id);
+  }
+
+  if (!patient) return null;
+
+  const currentEsi = patient.esiLevel;
+  let newEsi = currentEsi;
+  const reasons = [];
+
+  const heartRate = Number(vitals.heartRate);
+  const oxygenSat = Number(vitals.oxygenSat);
+  const sysBp = vitals.bloodPressure ? parseInt(vitals.bloodPressure.split('/')[0]) : NaN;
+
+  if (oxygenSat < 90) {
+    newEsi = 1;
+    reasons.push(`Critical Hypoxia (SpO2: ${oxygenSat}% < 90%)`);
+  } else if (oxygenSat < 94 && newEsi > 2) {
+    newEsi = 2;
+    reasons.push(`Moderate Hypoxia (SpO2: ${oxygenSat}%)`);
+  }
+
+  if (heartRate > 130) {
+    newEsi = 1;
+    reasons.push(`Severe Tachycardia (HR: ${heartRate} bpm > 130)`);
+  } else if ((heartRate > 115 || heartRate < 45) && newEsi > 2) {
+    newEsi = 2;
+    reasons.push(`Abnormal Heart Rate Telemetry (HR: ${heartRate} bpm)`);
+  }
+
+  if (!isNaN(sysBp) && sysBp < 90) {
+    if (newEsi > 1) newEsi = 1;
+    reasons.push(`Severe Hypotension (Systolic BP: ${sysBp} mmHg < 90)`);
+  }
+
+  const isEscalated = newEsi < currentEsi;
+  const updatePayload = {
+    vitals,
+    ...(isEscalated
+      ? {
+          esiLevel: newEsi,
+          previousEsiLevel: currentEsi,
+          isEscalated: true,
+          escalationReason: reasons.join(' | ')
+        }
+      : {})
+  };
+
+  const updated = await updatePatientStatus(id, updatePayload, io);
+
+  if (isEscalated && io && updated) {
+    io.emit('emergency_escalation', {
+      patient: updated,
+      previousEsiLevel: currentEsi,
+      newEsiLevel: newEsi,
+      reason: reasons.join(' | ')
+    });
+  }
+
+  return updated;
+}

@@ -4,11 +4,12 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
-import { analyzeTriage } from './services/aiTriage.js';
+import { analyzeTriage, generateFollowUpQuestion } from './services/aiTriage.js';
 import {
   getAllPatients,
   createPatientRecord,
   updatePatientStatus,
+  updatePatientVitals,
   reorderQueue
 } from './controllers/queueController.js';
 
@@ -113,6 +114,19 @@ app.post('/api/triage/analyze', async (req, res) => {
   }
 });
 
+app.post('/api/triage/chat', async (req, res) => {
+  try {
+    const { history, language } = req.body;
+    if (!history) {
+      return res.status(400).json({ error: 'History is required' });
+    }
+    const result = await generateFollowUpQuestion(history, language || 'en-US');
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/patients', async (req, res) => {
   try {
     const patients = await getAllPatients();
@@ -140,6 +154,23 @@ app.patch('/api/patients/:id/status', async (req, res) => {
     const { id } = req.params;
     const { status, roomNumber, nurseNotes, doctorNotes } = req.body;
     const updated = await updatePatientStatus(id, { status, roomNumber, nurseNotes, doctorNotes }, io);
+    if (!updated) {
+      return res.status(404).json({ error: 'Patient not found' });
+    }
+    res.json(updated);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/patients/:id/vitals', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { vitals } = req.body;
+    if (!vitals) {
+      return res.status(400).json({ error: 'Vitals payload required' });
+    }
+    const updated = await updatePatientVitals(id, vitals, io);
     if (!updated) {
       return res.status(404).json({ error: 'Patient not found' });
     }
