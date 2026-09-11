@@ -16,7 +16,8 @@ const RED_FLAG_KEYWORDS = [
   'chest pain', 'shortness of breath', 'can\'t breathe', 'difficulty breathing',
   'stroke', 'numbness', 'facial droop', 'unconscious', 'severe bleeding',
   'stabbing', 'gunshot', 'seizure', 'anaphylaxis', 'choking', 'cardiac',
-  'heart attack', 'unresponsive', 'poisoning', 'head trauma'
+  'heart attack', 'unresponsive', 'poisoning', 'head trauma', 'burn', 'burning',
+  'scald', 'fire', 'chemical burn', 'flame'
 ];
 
 function fallbackRuleTriage(transcript, language) {
@@ -75,8 +76,8 @@ export async function analyzeTriage(transcript, language = 'en-US') {
 
   const prompt = `You are an expert ER Triage Physician AI. Analyze the following patient intake transcript (spoken language: ${language}).
 Convert it into an Emergency Severity Index (ESI) classification from 1 to 5:
-- ESI 1: Resuscitation (Immediate life-saving intervention needed, e.g. cardiac arrest, severe respiratory distress, unresponsive)
-- ESI 2: Emergent (High risk, confused/lethargic/disoriented, severe pain/distress)
+- ESI 1: Resuscitation (Immediate life-saving intervention needed, e.g. cardiac arrest, severe respiratory distress, unresponsive, airway/facial burns)
+- ESI 2: Emergent (High risk, confused/lethargic/disoriented, severe pain/distress, severe burns, chemical burns, acute severe localized trauma)
 - ESI 3: Urgent (Stable, requires 2+ resources like X-ray + labs)
 - ESI 4: Less Urgent (Stable, requires 1 resource)
 - ESI 5: Non-Urgent (Stable, no resources needed)
