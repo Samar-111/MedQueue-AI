@@ -278,6 +278,16 @@ export default function VoiceIntake({ onPatientAdded }) {
     }
   };
 
+  const clearChatHistory = () => {
+    setChatMessages([
+      { role: 'ai', content: 'Hello! I am your AI ER Triage Assistant. Please describe your symptoms or health concerns today.' }
+    ]);
+    setChatInput('');
+    setIsChatComplete(false);
+    setStatusMessage('AI chat cleared.');
+    setTimeout(() => setStatusMessage(''), 2000);
+  };
+
   const resetForm = () => {
     setTranscript('');
     baseTranscriptRef.current = '';
@@ -286,6 +296,7 @@ export default function VoiceIntake({ onPatientAdded }) {
     setPatientName('');
     setStatusMessage('');
     setAddedNotice('');
+    clearChatHistory();
   };
 
   const loadPreset = (presetText, name = 'Preset Patient') => {
@@ -537,7 +548,7 @@ export default function VoiceIntake({ onPatientAdded }) {
               <button
                 type="button"
                 onClick={toggleListening}
-                className={`p-3 rounded-2xl border transition-all ${
+                className={`p-3 rounded-2xl border transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm ${
                   isListening ? 'bg-rose-500 text-white animate-pulse' : 'bg-amber-100 text-amber-900 hover:bg-amber-200'
                 }`}
               >
@@ -546,36 +557,46 @@ export default function VoiceIntake({ onPatientAdded }) {
               <button
                 type="submit"
                 disabled={!chatInput.trim() || isChatLoading}
-                className="pulse-buffer-btn px-6 py-3 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50"
+                className="pulse-buffer-btn px-6 py-3 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 disabled:opacity-50 transition-all duration-200 hover:scale-105 active:scale-95 shadow-md"
               >
                 <span>Send</span>
                 <Send className="w-3.5 h-3.5" />
               </button>
             </form>
 
-            <div className="pt-4 flex justify-between items-center border-t border-amber-100">
+            <div className="pt-4 flex flex-col sm:flex-row justify-between items-center gap-3 border-t border-amber-100">
               <span className="text-xs font-bold text-stone-500">
                 {isChatComplete ? '✅ Sufficient clinical details gathered.' : 'Answer follow-up questions or generate triage anytime.'}
               </span>
-              <button
-                type="button"
-                onClick={handleAnalyzeChatHistory}
-                disabled={chatMessages.length < 2 || isAnalyzing}
-                className="pulse-buffer-btn px-8 py-3.5 font-black text-xs uppercase tracking-wider flex items-center gap-2 disabled:opacity-50"
-              >
-                {isAnalyzing ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Evaluating Complete Dialogue...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Finalize AI Triage Report</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={clearChatHistory}
+                  className="px-4 py-2.5 rounded-full bg-stone-100 hover:bg-rose-50 hover:text-rose-700 border border-stone-200 hover:border-rose-200 text-stone-700 font-extrabold text-xs flex items-center gap-1.5 transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Clear Chat</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAnalyzeChatHistory}
+                  disabled={chatMessages.length < 2 || isAnalyzing}
+                  className="pulse-buffer-btn px-7 py-3.5 font-black text-xs uppercase tracking-wider flex items-center gap-2 disabled:opacity-50 transition-all duration-200 hover:scale-105 active:scale-95 shadow-md"
+                >
+                  {isAnalyzing ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Evaluating Complete Dialogue...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Finalize AI Triage Report</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         ) : (

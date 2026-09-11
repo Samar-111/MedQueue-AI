@@ -62,6 +62,26 @@ export default function NurseDashboard({ patients, isConnected }) {
     };
   }, []);
 
+  const [saveNotice, setSaveNotice] = useState('');
+
+  const handleSaveESIOverrideOnly = async (targetLevel = null) => {
+    if (!selectedPatient) return;
+    const newLvl = targetLevel !== null ? targetLevel : Number(overrideESI);
+    try {
+      const patientId = selectedPatient._id || selectedPatient.ticketId;
+      await overridePatientESI(patientId, {
+        esiLevel: newLvl,
+        nurseNotes: nurseNoteText
+      });
+      setOverrideESI(newLvl);
+      setSelectedPatient((prev) => prev ? { ...prev, esiLevel: newLvl } : null);
+      setSaveNotice(`ESI Level updated to ${newLvl}!`);
+      setTimeout(() => setSaveNotice(''), 2500);
+    } catch (err) {
+      console.error('ESI override save error:', err);
+    }
+  };
+
   const activeQueue = patients.filter(
     (p) => p.status === 'WAITING' || p.status === 'TRIAGED'
   );
@@ -344,15 +364,22 @@ export default function NurseDashboard({ patients, isConnected }) {
               </div>
 
               <div>
-                <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block mb-2">
-                  Manual ESI Escalation Override
-                </label>
-                <div className="grid grid-cols-5 gap-1.5">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider">
+                    Manual ESI Escalation Override
+                  </label>
+                  {saveNotice && (
+                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full border border-emerald-300 animate-pulse">
+                      {saveNotice}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-5 gap-1.5 mb-2.5">
                   {[1, 2, 3, 4, 5].map((lvl) => (
                     <button
                       key={lvl}
                       onClick={() => setOverrideESI(lvl)}
-                      className={`py-2 rounded-xl text-xs font-black border transition-all ${
+                      className={`py-2 rounded-xl text-xs font-black border transition-all duration-200 hover:scale-105 active:scale-95 shadow-sm ${
                         overrideESI === lvl
                           ? getEsiBadgeStyle(lvl)
                           : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
@@ -362,6 +389,14 @@ export default function NurseDashboard({ patients, isConnected }) {
                     </button>
                   ))}
                 </div>
+                <button
+                  type="button"
+                  onClick={() => handleSaveESIOverrideOnly()}
+                  className="w-full py-2.5 rounded-xl bg-indigo-950 hover:bg-indigo-900 text-white font-black text-xs flex items-center justify-center gap-1.5 transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-md"
+                >
+                  <CheckCircle className="w-3.5 h-3.5 text-teal-400" />
+                  <span>Save Manual ESI Override Now</span>
+                </button>
               </div>
 
               <div>
@@ -439,7 +474,7 @@ export default function NurseDashboard({ patients, isConnected }) {
 
               <button
                 onClick={handleSaveTriage}
-                className="btn-primary-gradient w-full py-3 rounded-full text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                className="btn-primary-gradient w-full py-3.5 rounded-full text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-95 shadow-xl hover:shadow-2xl cursor-pointer"
               >
                 <CheckCircle className="w-4 h-4" />
                 <span>Confirm Nurse Assessment</span>
