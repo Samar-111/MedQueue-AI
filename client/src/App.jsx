@@ -7,6 +7,7 @@ import NurseDashboard from './components/NurseDashboard';
 import DoctorDashboard from './components/DoctorDashboard';
 import LobbyDisplay from './components/LobbyDisplay';
 import AnalyticsModal from './components/AnalyticsModal';
+import MedicalTechBackground from './components/MedicalTechBackground';
 import { socket } from './services/socket';
 import { fetchPatients } from './services/api';
 
@@ -57,7 +58,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen text-stone-900 flex flex-col font-sans selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen text-stone-900 flex flex-col font-sans selection:bg-orange-500 selection:text-white relative">
+      <MedicalTechBackground />
       
       <Navbar
         activeView={activeView}
