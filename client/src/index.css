@@ -4,24 +4,14 @@
 
 @layer base {
   body {
-    background-color: #f1f4f8 !important;
+    background-color: #eef0f2 !important;
     background-image: 
-      radial-gradient(circle at 12% 18%, rgba(2, 132, 199, 0.06) 0%, transparent 45%),
-      radial-gradient(circle at 88% 82%, rgba(13, 148, 136, 0.05) 0%, transparent 50%),
-      radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.04) 0%, transparent 55%);
+      radial-gradient(circle at 12% 18%, rgba(2, 132, 199, 0.04) 0%, transparent 45%),
+      radial-gradient(circle at 88% 82%, rgba(13, 148, 136, 0.03) 0%, transparent 50%),
+      radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.03) 0%, transparent 55%);
     background-attachment: fixed;
     color: #0f172a;
-    transition: background-color 0.4s ease, color 0.4s ease;
   }
-}
-
-html.dark body {
-  background-color: #0b1120 !important;
-  background-image: 
-    radial-gradient(circle at 12% 18%, rgba(14, 165, 233, 0.16) 0%, transparent 45%),
-    radial-gradient(circle at 88% 82%, rgba(20, 184, 166, 0.14) 0%, transparent 50%),
-    radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.12) 0%, transparent 55%) !important;
-  color: #f8fafc;
 }
 
 @keyframes spinSlow {
@@ -107,13 +97,6 @@ html.dark body {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid #e2e8f0;
   box-shadow: 0 12px 30px -10px rgba(15, 23, 42, 0.08);
-  transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
-}
-
-html.dark .glass-dock {
-  background: rgba(15, 23, 42, 0.92);
-  border-color: rgba(51, 65, 85, 0.7);
-  box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.6);
 }
 
 .sunny-card {
@@ -122,14 +105,7 @@ html.dark .glass-dock {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid #e2e8f0;
   box-shadow: 0 15px 30px -10px rgba(15, 23, 42, 0.06);
-  transition: background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
-}
-
-html.dark .sunny-card {
-  background: rgba(15, 23, 42, 0.88);
-  border-color: rgba(51, 65, 85, 0.7);
-  box-shadow: 0 15px 35px -10px rgba(0, 0, 0, 0.5);
-  color: #f8fafc;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sunny-card-hover {
@@ -141,61 +117,11 @@ html.dark .sunny-card {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-html.dark .sunny-card-hover {
-  background: rgba(15, 23, 42, 0.82);
-  border-color: rgba(51, 65, 85, 0.6);
-  box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.4);
-  color: #f8fafc;
-}
-
 .sunny-card-hover:hover {
   background: #ffffff;
   border-color: #0284c7;
   transform: translateY(-3px);
   box-shadow: 0 20px 30px -10px rgba(2, 132, 199, 0.15);
-}
-
-html.dark .sunny-card-hover:hover {
-  background: rgba(30, 41, 59, 0.95);
-  border-color: #38bdf8;
-  transform: translateY(-3px);
-  box-shadow: 0 20px 35px -10px rgba(56, 189, 248, 0.25);
-}
-
-html.dark .text-slate-900,
-html.dark .text-stone-900,
-html.dark .text-slate-800,
-html.dark .text-slate-700 {
-  color: #f8fafc;
-}
-
-html.dark .text-slate-600 {
-  color: #cbd5e1;
-}
-
-html.dark .text-slate-500 {
-  color: #94a3b8;
-}
-
-html.dark .bg-white {
-  background-color: rgba(15, 23, 42, 0.88);
-}
-
-html.dark .bg-slate-50 {
-  background-color: rgba(30, 41, 59, 0.75);
-}
-
-html.dark .bg-slate-100 {
-  background-color: rgba(30, 41, 59, 0.85);
-}
-
-html.dark .bg-slate-200 {
-  background-color: rgba(51, 65, 85, 0.7);
-}
-
-html.dark .border-slate-200,
-html.dark .border-slate-300 {
-  border-color: rgba(51, 65, 85, 0.6);
 }
 
 .esi-halo-1 {
@@ -214,28 +140,15 @@ html.dark .border-slate-300 {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(241, 245, 249, 0.8);
-}
-
-html.dark ::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(238, 240, 242, 0.8);
 }
 
 ::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.5);
   border-radius: 9999px;
-  border: 2px solid rgba(241, 245, 249, 0.9);
-}
-
-html.dark ::-webkit-scrollbar-thumb {
-  background: rgba(51, 65, 85, 0.7);
-  border: 2px solid rgba(15, 23, 42, 0.9);
+  border: 2px solid rgba(238, 240, 242, 0.9);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.7);
-}
-
-html.dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(71, 85, 105, 0.9);
 }

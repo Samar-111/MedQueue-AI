@@ -17,22 +17,6 @@ export default function App() {
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [emergencyNotification, setEmergencyNotification] = useState(null);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
-  const [themeMode, setThemeMode] = useState(() => {
-    return localStorage.getItem('medqueue_theme') || 'light';
-  });
-
-  useEffect(() => {
-    localStorage.setItem('medqueue_theme', themeMode);
-    if (themeMode === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [themeMode]);
-
-  const toggleTheme = () => {
-    setThemeMode((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
 
   const loadPatients = async () => {
     try {
@@ -74,8 +58,8 @@ export default function App() {
   }, []);
 
   return (
-    <div className="min-h-screen text-slate-900 dark:text-slate-100 flex flex-col font-sans selection:bg-orange-500 selection:text-white relative transition-colors duration-300">
-      <MedicalTechBackground themeMode={themeMode} />
+    <div className="min-h-screen text-slate-900 flex flex-col font-sans selection:bg-orange-500 selection:text-white relative">
+      <MedicalTechBackground />
       
       <Navbar
         activeView={activeView}
@@ -83,8 +67,6 @@ export default function App() {
         isConnected={isConnected}
         patients={patients}
         onOpenAnalytics={() => setIsAnalyticsOpen(true)}
-        themeMode={themeMode}
-        toggleTheme={toggleTheme}
       />
 
       <AnimatePresence>
