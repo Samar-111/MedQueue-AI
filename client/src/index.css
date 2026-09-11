@@ -4,11 +4,11 @@
 
 @layer base {
   body {
-    background-color: #030712 !important;
+    background-color: #070d18 !important;
     background-image: 
-      radial-gradient(circle at 10% 15%, rgba(14, 165, 233, 0.22) 0%, transparent 45%),
-      radial-gradient(circle at 90% 85%, rgba(20, 184, 166, 0.2) 0%, transparent 50%),
-      radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.12) 0%, transparent 60%);
+      radial-gradient(circle at 12% 18%, rgba(14, 165, 233, 0.09) 0%, transparent 45%),
+      radial-gradient(circle at 88% 82%, rgba(20, 184, 166, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.06) 0%, transparent 55%);
     background-attachment: fixed;
     color: #f8fafc;
   }
@@ -32,27 +32,27 @@
   }
 }
 
-@keyframes ecgSweep {
+@keyframes ecgCalmSweep {
   0% {
-    stroke-dashoffset: 1000;
+    stroke-dashoffset: 1200;
   }
   100% {
-    stroke-dashoffset: -1000;
+    stroke-dashoffset: -1200;
   }
 }
 
-.animate-spin-slow {
-  animation: spinSlow 35s linear infinite;
+.animate-spin-ultra-slow {
+  animation: spinSlow 75s linear infinite;
   transform-origin: center;
 }
 
-.animate-spin-reverse-slow {
-  animation: spinReverseSlow 45s linear infinite;
+.animate-spin-ultra-reverse {
+  animation: spinReverseSlow 90s linear infinite;
   transform-origin: center;
 }
 
-.animate-ecg-sweep {
-  animation: ecgSweep 12s linear infinite;
+.animate-ecg-calm {
+  animation: ecgCalmSweep 24s linear infinite;
 }
 
 @keyframes pulseBuffer {
