@@ -19,14 +19,14 @@ export default function MedicalTechBackground() {
 
     window.addEventListener('resize', handleResize);
 
-    const particles = Array.from({ length: 12 }, () => ({
-      x: Math.random() > 0.5 ? Math.random() * width * 0.25 : width * 0.75 + Math.random() * width * 0.25,
+    const particles = Array.from({ length: 14 }, () => ({
+      x: Math.random() * width,
       y: Math.random() * height,
       vx: (Math.random() - 0.5) * 0.15,
       vy: -0.1 - Math.random() * 0.15,
-      radius: Math.random() * 1.5 + 1,
-      color: ['#38bdf8', '#06b6d4', '#14b8a6', '#818cf8'][Math.floor(Math.random() * 4)],
-      alpha: Math.random() * 0.35 + 0.15
+      radius: Math.random() * 2 + 1,
+      color: ['#0284c7', '#0d9488', '#6366f1', '#64748b'][Math.floor(Math.random() * 4)],
+      alpha: Math.random() * 0.25 + 0.1
     }));
 
     const staticNodes = [
@@ -53,29 +53,26 @@ export default function MedicalTechBackground() {
         ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
         ctx.fillStyle = p.color;
         ctx.globalAlpha = p.alpha;
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = p.color;
         ctx.fill();
-        ctx.shadowBlur = 0;
       });
 
       pulseTime += 0.008;
-      const lineAlpha = (Math.sin(pulseTime) * 0.05 + 0.1);
+      const lineAlpha = Math.sin(pulseTime) * 0.04 + 0.08;
 
       ctx.beginPath();
       ctx.moveTo(staticNodes[0].x, staticNodes[0].y);
       ctx.lineTo(staticNodes[1].x, staticNodes[1].y);
       ctx.moveTo(staticNodes[2].x, staticNodes[2].y);
       ctx.lineTo(staticNodes[3].x, staticNodes[3].y);
-      ctx.strokeStyle = '#38bdf8';
+      ctx.strokeStyle = '#94a3b8';
       ctx.globalAlpha = lineAlpha;
       ctx.lineWidth = 1;
       ctx.stroke();
 
       staticNodes.forEach((node) => {
         ctx.beginPath();
-        ctx.arc(node.x, node.y, 2.5, 0, Math.PI * 2);
-        ctx.fillStyle = '#38bdf8';
+        ctx.arc(node.x, node.y, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#0284c7';
         ctx.globalAlpha = lineAlpha * 1.5;
         ctx.fill();
       });
@@ -93,79 +90,72 @@ export default function MedicalTechBackground() {
   }, []);
 
   return (
-    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none select-none bg-[#070d18]">
+    <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none select-none bg-[#f1f4f8]">
       
       <div 
-        className="absolute inset-0 opacity-80"
+        className="absolute inset-0 opacity-90"
         style={{
           background: `
-            radial-gradient(circle at 12% 18%, rgba(14, 165, 233, 0.09) 0%, transparent 45%),
-            radial-gradient(circle at 88% 82%, rgba(20, 184, 166, 0.08) 0%, transparent 50%),
-            radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.06) 0%, transparent 55%),
-            radial-gradient(circle at 50% 50%, rgba(7, 13, 24, 0.95) 0%, #070d18 100%)
+            radial-gradient(circle at 12% 18%, rgba(2, 132, 199, 0.06) 0%, transparent 45%),
+            radial-gradient(circle at 88% 82%, rgba(13, 148, 136, 0.05) 0%, transparent 50%),
+            radial-gradient(circle at 50% 90%, rgba(99, 102, 241, 0.04) 0%, transparent 55%),
+            #f1f4f8
           `
         }}
       />
 
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-70" />
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full opacity-60" />
 
-      <svg className="absolute inset-0 w-full h-full opacity-40">
+      <svg className="absolute inset-0 w-full h-full opacity-35">
         <defs>
-          <linearGradient id="calmEcgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#06b6d4" stopOpacity="0" />
-            <stop offset="30%" stopColor="#38bdf8" stopOpacity="0.25" />
-            <stop offset="70%" stopColor="#14b8a6" stopOpacity="0.25" />
-            <stop offset="100%" stopColor="#818cf8" stopOpacity="0" />
+          <linearGradient id="lightEcgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#0284c7" stopOpacity="0" />
+            <stop offset="30%" stopColor="#0284c7" stopOpacity="0.25" />
+            <stop offset="70%" stopColor="#0d9488" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
           </linearGradient>
 
-          <pattern id="subtleGrid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
-            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="rgba(56, 189, 248, 0.03)" strokeWidth="1" />
+          <pattern id="lightSubtleGrid" x="0" y="0" width="48" height="48" patternUnits="userSpaceOnUse">
+            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="rgba(148, 163, 184, 0.12)" strokeWidth="1" />
           </pattern>
         </defs>
 
-        <rect width="100%" height="100%" fill="url(#subtleGrid)" />
+        <rect width="100%" height="100%" fill="url(#lightSubtleGrid)" />
 
         <g>
           <path
             d="M -100 220 L 220 220 L 235 220 L 245 180 L 255 260 L 265 140 L 278 300 L 290 200 L 300 220 L 1600 220"
             fill="none"
-            stroke="url(#calmEcgGrad)"
+            stroke="url(#lightEcgGrad)"
             strokeWidth="1.5"
             strokeDasharray="16 8"
             className="animate-ecg-calm"
           />
         </g>
 
-        <g opacity="0.12">
-          <circle cx="10%" cy="25%" r="140" stroke="#38bdf8" strokeWidth="1" fill="none" strokeDasharray="10 8" className="animate-spin-ultra-slow" />
-          <circle cx="90%" cy="75%" r="180" stroke="#14b8a6" strokeWidth="1" fill="none" strokeDasharray="12 10" className="animate-spin-ultra-reverse" />
+        <g opacity="0.18">
+          <circle cx="10%" cy="25%" r="140" stroke="#0284c7" strokeWidth="1" fill="none" strokeDasharray="10 8" className="animate-spin-ultra-slow" />
+          <circle cx="90%" cy="75%" r="180" stroke="#0d9488" strokeWidth="1" fill="none" strokeDasharray="12 10" className="animate-spin-ultra-reverse" />
         </g>
 
-        <g opacity="0.08" transform="translate(60, 60)">
+        <g opacity="0.1" transform="translate(60, 60)">
           <path
             d="M 40 10 L 70 10 L 70 40 L 100 40 L 100 70 L 70 70 L 70 100 L 40 100 L 40 70 L 10 70 L 10 40 L 40 40 Z"
-            fill="rgba(56, 189, 248, 0.2)"
-            stroke="#38bdf8"
+            fill="rgba(2, 132, 199, 0.15)"
+            stroke="#0284c7"
             strokeWidth="1.5"
           />
         </g>
 
-        <g opacity="0.06" transform="translate(1400, 480)">
+        <g opacity="0.08" transform="translate(1400, 480)">
           <path
             d="M 40 10 L 70 10 L 70 40 L 100 40 L 100 70 L 70 70 L 70 100 L 40 100 L 40 70 L 10 70 L 10 40 L 40 40 Z"
-            fill="rgba(20, 184, 166, 0.2)"
-            stroke="#14b8a6"
+            fill="rgba(13, 148, 136, 0.15)"
+            stroke="#0d9488"
             strokeWidth="1.5"
           />
         </g>
       </svg>
-
-      <div 
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: 'radial-gradient(circle at 50% 50%, rgba(7, 13, 24, 0.2) 0%, rgba(7, 13, 24, 0.8) 100%)'
-        }}
-      />
     </div>
   );
 }
